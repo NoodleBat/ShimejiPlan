@@ -7,202 +7,305 @@ namespace ShimejiPlan124325
 {
     public partial class MainForm : System.Windows.Forms.Form
     {
-        BindingList<Mascot> mascots = new BindingList<Mascot>(); // создаем для показа
-        private readonly MascotProcessManager _processManager = new MascotProcessManager(); // показ с настройками
+        BindingList<Mascot> mascots = new BindingList<Mascot>(); // РґР»СЏ РїРѕРєР°Р·Р° РІ РіСЂРёРґРµ
+        private readonly MascotProcessManager _processManager = new MascotProcessManager(); // РїРѕРєР°Р· СЃ РЅР°СЃС‚СЂРѕР№РєР°РјРё
 
-        BindingList<ScheduledNotification> notifications = new BindingList<ScheduledNotification>(); // показ уведомлений
-        private BindingList<ScheduledNotification> _notifications; //еще к уведам
+        BindingList<ScheduledNotification> notifications = new BindingList<ScheduledNotification>(); // РїРѕРєР°Р· СѓРІРµРґРѕРјР»РµРЅРёР№
+        private BindingList<ScheduledNotification> _notifications; //РµС‰Рµ Рє СѓРІРµРґР°Рј
+        private BindingList<TaskItem> _tasks; //РїРѕР»Рµ РґР»СЏ Р·Р°РґР°С‡
 
         public MainForm()
         {
             InitializeComponent();
 
-            // запуск DataGridView на первой странице с шимеджи
-
-            mascots = new BindingList<Mascot>(MascotStorage.Load());
-            // Если нужно, подписываемся на событие ListChanged для автосохранения
+            mascots = new BindingList<Mascot>(MascotStorage.Load()); // Р—Р°РіСЂСѓР¶Р°РµРј РґР°РЅРЅС‹Рµ
             mascots.ListChanged += (s, e) => MascotStorage.Save(mascots);
-            dgvMascots.DataSource = mascots;
 
-            dgvMascots.AutoGenerateColumns = false; // отключение автогенерации столбов 
-            dgvMascots.DataSource = mascots;
-
-            DataGridViewTextBoxColumn colName = new DataGridViewTextBoxColumn(); // поле имя
-            colName.Name = "colName";
-            colName.HeaderText = "Имя";
-            colName.DataPropertyName = "Name";
-            dgvMascots.Columns.Add(colName);
-
-            DataGridViewTextBoxColumn colPath = new DataGridViewTextBoxColumn(); // поле путь
-            colPath.Name = "colPath";
-            colPath.HeaderText = "Путь";
-            colPath.DataPropertyName = "JarPath";
-            dgvMascots.Columns.Add(colPath);
-
-
-            DataGridViewTextBoxColumn colStatus = new DataGridViewTextBoxColumn(); // поле статус
-            colStatus.Name = "colStatus";
-            colStatus.HeaderText = "Статус";
-            colStatus.DataPropertyName = "Status";
-            dgvMascots.Columns.Add(colStatus);
-
-            DataGridViewTextBoxColumn colProcessId = new DataGridViewTextBoxColumn(); // скрытое поле для хранения ProcessId
-            colProcessId.Name = "colProcessId";
-            colProcessId.HeaderText = "Process ID"; // его не видно но пусть будет
-            colProcessId.Visible = false;          // скрытие ее
-            colProcessId.DataPropertyName = "ProcessId";
-            dgvMascots.Columns.Add(colProcessId);
-
-            // настройка panel на первой странице на главной форме
-
-
-            // настройка  DataGridView на второй странице с задачами
-
-            dgvNotifications.DataSource = notifications;
             _notifications = new BindingList<ScheduledNotification>(NotificationStorage.Load());
             _notifications.ListChanged += (s, e) => NotificationStorage.Save(_notifications);
+
+            ConfigureMascotsGrid();// РќР°СЃС‚СЂР°РёРІР°РµРј С‚Р°Р±Р»РёС†С‹ Рё РїСЂРёРІСЏР·РєРё
+            ConfigureNotificationsGrid();
+
+            this.notifyIcon.Icon = System.Drawing.SystemIcons.Information;// РёРєРѕРЅРєР° РґР»СЏ СѓРІРµРґРѕРјР»РµРЅРёСЏ
+
+
+            _tasks = new BindingList<TaskItem>(TaskStorage.Load());// Р—Р°РіСЂСѓР¶Р°РµРј Р·Р°РґР°С‡Рё
+            _tasks.ListChanged += (s, e) => TaskStorage.Save(_tasks);
+            ConfigureTasksGrid();
+
+            // Р—Р°РїСѓСЃРєР°РµРј С‚Р°Р№РјРµСЂ С‚РѕР»СЊРєРѕ РїРѕСЃР»Рµ С‚РѕРіРѕ, РєР°Рє РІСЃС‘ РіРѕС‚РѕРІРѕ
+            timerCheck.Enabled = true;  // РёР»Рё timerCheck.Start();
+
+            Logger.Info("РџСЂРёР»РѕР¶РµРЅРёРµ Shimeji Manager Р·Р°РїСѓС‰РµРЅРѕ.");
+            this.timerCheck.Tick += new System.EventHandler(this.TimerCheck_Tick);
+
+        }
+        private void ConfigureMascotsGrid()// Р·Р°РїСѓСЃРє DataGridView РЅР° РїРµСЂРІРѕР№ СЃС‚СЂР°РЅРёС†Рµ СЃ С€РёРјРµРґР¶Рё
+        {
+            dgvMascots.AutoGenerateColumns = false;
+            dgvMascots.DataSource = mascots;
+
+            // Р”РѕР±Р°РІРёС‚СЊ РєРѕР»РѕРЅРєРё (РјРѕР¶РЅРѕ РѕСЃС‚Р°РІРёС‚СЊ РєР°Рє Сѓ РІР°СЃ, РЅРѕ Р»СѓС‡С€Рµ РІС‹РЅРµСЃС‚Рё РІ РѕС‚РґРµР»СЊРЅС‹Р№ РјРµС‚РѕРґ)
+            dgvMascots.Columns.Add(new DataGridViewTextBoxColumn // РїРѕР»Рµ РёРјСЏ
+            {
+                Name = "colName",
+                HeaderText = "РРјСЏ",
+                DataPropertyName = "Name"
+            });
+            dgvMascots.Columns.Add(new DataGridViewTextBoxColumn// РїРѕР»Рµ РїСѓС‚СЊ
+            {
+                Name = "colPathe",
+                HeaderText = "РџСѓС‚СЊ",
+                DataPropertyName = "JarPath"
+            });
+            dgvMascots.Columns.Add(new DataGridViewTextBoxColumn // РїРѕР»Рµ СЃС‚Р°С‚СѓСЃ
+            {
+                Name = "colStatus",
+                HeaderText = "РЎС‚Р°С‚СѓСЃ",
+                DataPropertyName = "Status"
+            });
+            dgvMascots.Columns.Add(new DataGridViewTextBoxColumn // СЃРєСЂС‹С‚РѕРµ РїРѕР»Рµ РґР»СЏ С…СЂР°РЅРµРЅРёСЏ ProcessId
+            {
+                Name = "colProcessId",
+                HeaderText = "Process ID",
+                DataPropertyName = "ProcessId",
+                Visible = false
+            });
+
+            mascots = new BindingList<Mascot>(MascotStorage.Load());
+            mascots.ListChanged += (s, e) => MascotStorage.Save(mascots);// Р°РІС‚РѕСЃРѕС…СЂР°РЅРµРЅРёРµ
+            dgvMascots.DataSource = mascots;
+
+            dgvMascots.AutoGenerateColumns = false; // РѕС‚РєР»СЋС‡РµРЅРёРµ Р°РІС‚РѕРіРµРЅРµСЂР°С†РёРё СЃС‚РѕР»Р±РѕРІ 
+            dgvMascots.DataSource = mascots;// РїСЂРёРІСЏР·РєР° РіСЂРёРґР°
+
+        }
+        private void ConfigureNotificationsGrid()
+        {
+            dgvNotifications.AutoGenerateColumns = false;
             dgvNotifications.DataSource = _notifications;
-            dgvNotifications.AutoGenerateColumns = false; // Отключаем авто-генерацию, если будете привязывать данные
 
-            // Колонка "Время" с форматом
-            DataGridViewTextBoxColumn colTime = new DataGridViewTextBoxColumn();
-            colTime.Name = "colTime";
-            colTime.DataPropertyName = "Time";
-            colTime.HeaderText = "Время";
-            colTime.DefaultCellStyle.Format = "dd.MM.yyyy HH:mm";
-            // Если источник данных ожидает DateTime, формат применится автоматически
-            // colTime.DefaultCellStyle.FormatProvider = System.Globalization.CultureInfo.InvariantCulture;
-            dgvNotifications.Columns.Add(colTime);
+            dgvNotifications.Columns.Add(new DataGridViewTextBoxColumn// РїРѕР»Рµ РІСЂРµРјСЏ
+            {
+                Name = "colTime",
+                HeaderText = "Р’СЂРµРјСЏ",
+                DataPropertyName = "Time",
+                DefaultCellStyle = { Format = "dd.MM.yyyy HH:mm" }// С„РѕСЂРјР°С‚ РІСЂРµРјРµРЅРё
+            });
+            // ... РѕСЃС‚Р°Р»СЊРЅС‹Рµ РєРѕР»РѕРЅРєРё, РћР‘РЇР—РђРўР•Р›Р¬РќРћ РїСЂРѕРІРµСЂСЊС‚Рµ РёРјРµРЅР° СЃРІРѕР№СЃС‚РІ:
+            // Target -> TargetMascotName, Repeat -> Repeat (РµСЃР»Рё РІ РјРѕРґРµР»Рё Repeat)
+            // РќР°РїСЂРёРјРµСЂ:
+            dgvNotifications.Columns.Add(new DataGridViewTextBoxColumn// РїРѕР»Рµ РїРµСЂСЃРѕРЅР°Р¶
+            {
+                Name = "colTarget",
+                HeaderText = "РњР°СЃРєРѕС‚",
+                DataPropertyName = "TargetMascotName"
+            });
+            dgvNotifications.Columns.Add(new DataGridViewTextBoxColumn// РїРѕР»Рµ СЃРѕРѕР±С‰РµРЅРёРµ
+            {
+                Name = "colMessage",
+                HeaderText = "РЎРѕРѕР±С‰РµРЅРёРµ",
+                DataPropertyName = "Message"
+            });
+            dgvNotifications.Columns.Add(new DataGridViewTextBoxColumn// РїРѕР»Рµ РїРѕРІС‚РѕСЂ
+            {
+                Name = "colRepeat",
+                HeaderText = "РџРѕРІС‚РѕСЂ",
+                DataPropertyName = "Repeat"
+            });
 
-            // Колонка "Сообщение"
-            DataGridViewTextBoxColumn colMessage = new DataGridViewTextBoxColumn();
-            colMessage.Name = "colMessage";
-            colMessage.DataPropertyName = "Message";
-            colMessage.HeaderText = "Сообщение";
-            dgvNotifications.Columns.Add(colMessage);
+            // РЅР°СЃС‚СЂРѕР№РєР°  DataGridView РЅР° РІС‚РѕСЂРѕР№ СЃС‚СЂР°РЅРёС†Рµ СЃ Р·Р°РґР°С‡Р°РјРё
 
-            // Колонка "Маскот"
-            DataGridViewTextBoxColumn colTarget = new DataGridViewTextBoxColumn();
-            colTarget.Name = "colTarget";
-            colTarget.DataPropertyName = "Target";
-            colTarget.HeaderText = "Маскот";
-            dgvNotifications.Columns.Add(colTarget);
-
-            // Колонка "Повтор"
-            DataGridViewTextBoxColumn colRepeat = new DataGridViewTextBoxColumn();
-            colRepeat.Name = "colRepeat";
-            colRepeat.DataPropertyName = "Repeat";
-            colRepeat.HeaderText = "Повтор";
-            dgvNotifications.Columns.Add(colRepeat);
+            dgvNotifications.DataSource = notifications;// РїСЂРёРІСЏР·РєР° РІС‚РѕСЂРѕР№ СЃС‚СЂР°РЅРёС†С‹
+            _notifications = new BindingList<ScheduledNotification>(NotificationStorage.Load());
+            _notifications.ListChanged += (s, e) => NotificationStorage.Save(_notifications);//Р°РІС‚РѕСЃРѕС…СЂ
+            dgvNotifications.DataSource = _notifications;
+            dgvNotifications.AutoGenerateColumns = false; // РјРёРЅСѓСЃ Р°РІС‚РѕРіРµРЅРµСЂР°С†РёСЏ
 
         }
-
-        private void Addbtn_Click(object sender, EventArgs e)
+        // РїСЂРѕРІРµСЂРєР° РЅР°Р»РёС‡РёСЏ Java РґР»СЏ РІРѕР·РјРѕР¶РЅРѕСЃС‚Рё Р·Р°РїСѓСЃРєР°
+        private bool IsJavaAvailable
         {
-            using (var openDlg = new OpenFileDialog())
+            get
             {
-                openDlg.Filter = "Jar-файлы (*.jar)|*.jar|Все файлы (*.*)|*.*";
-                openDlg.Title = "Выберите исполняемый Jar Shimeji";
-                if (openDlg.ShowDialog() != DialogResult.OK)
-                    return;
-
-                string sourceJarPath = openDlg.FileName;
-
-                // Запрос имени
-                string name = Microsoft.VisualBasic.Interaction.InputBox(
-                    "Введите название маскота:", "Имя маскота",
-                    Path.GetFileNameWithoutExtension(sourceJarPath));
-
-                if (string.IsNullOrWhiteSpace(name))
-                    name = Path.GetFileNameWithoutExtension(sourceJarPath);
-
-                // копирка jar в локальное хранилище (или сохранение ориг пути)
-                string storageDir = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "ShimejiManager", "Mascots");
-                Directory.CreateDirectory(storageDir);
-
-                string destJarPath = Path.Combine(storageDir, Path.GetFileName(sourceJarPath));
-                File.Copy(sourceJarPath, destJarPath, overwrite: true);
-
-                var mascot = new Mascot // создание обьекта
+                try
                 {
-                    Name = name,
-                    JarPath = destJarPath, // или sourceJarPath, если не копировать
-                    IsRunning = false
-                };
+                    var psi = new ProcessStartInfo("java", "-version")
+                    {
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                        RedirectStandardError = true
+                    };
 
-                mascots.Add(mascot);
-                // Сохранение происходит автоматически
+                    Process? proc = Process.Start(psi);
+                    if (proc == null)
+                        return false;
+
+                    using (proc)
+                    {
+                        proc.WaitForExit(3000);
+                        return proc.ExitCode == 0;
+                    }
+                }
+                catch
+                {
+                    return false;
+                }
             }
         }
-        private bool IsJavaAvailable() // проверка наличия Java для возможности запуска
+
+        // РїРµСЂРІР°СЏ СЃС‚СЂР°РЅРёС†Р° РєРЅРѕРїРєРё
+        private void Addbtn_Click(object sender, EventArgs e)// РєРЅРѕРїРєР° РґРѕР±РІР°Р»РµРЅРёСЏ
         {
-            try
+            using var openDlg = new OpenFileDialog();
+            openDlg.Filter = "Jar-С„Р°Р№Р»С‹ (*.jar)|*.jar|Р’СЃРµ С„Р°Р№Р»С‹ (*.*)|*.*";
+            openDlg.Title = "Р’С‹Р±РµСЂРёС‚Рµ РёСЃРїРѕР»РЅСЏРµРјС‹Р№ Jar Shimeji";
+            if (openDlg.ShowDialog() != DialogResult.OK)
+                return;
+
+            string sourceJarPath = openDlg.FileName;
+
+            string name = Microsoft.VisualBasic.Interaction.InputBox(// Р—Р°РїСЂР°С€РёРІР°РµРј РёРјСЏ РјР°СЃРєРѕС‚Р°
+                "Р’РІРµРґРёС‚Рµ РЅР°Р·РІР°РЅРёРµ РјР°СЃРєРѕС‚Р°:", "РРјСЏ РјР°СЃРєРѕС‚Р°",
+                Path.GetFileNameWithoutExtension(sourceJarPath));
+            if (string.IsNullOrWhiteSpace(name))
+                name = Path.GetFileNameWithoutExtension(sourceJarPath);
+
+            string mascotStorageDir = Path.Combine(// РџР°РїРєР°-С…СЂР°РЅРёР»РёС‰Рµ РґР»СЏ СЌС‚РѕРіРѕ РјР°СЃРєРѕС‚Р°
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "ShimejiManager", "Mascots", name);
+            Directory.CreateDirectory(mascotStorageDir);
+
+            string destJarPath = Path.Combine(mascotStorageDir, Path.GetFileName(sourceJarPath));// РљРѕРїРёСЂСѓРµРј СЃР°Рј .jar-С„Р°Р№Р»
+            File.Copy(sourceJarPath, destJarPath, overwrite: true);
+
+            string? sourceDir = Path.GetDirectoryName(sourceJarPath);// РљРѕРїРёСЂСѓРµРј РІСЃРµ РїР°РїРєРё, Р»РµР¶Р°С‰РёРµ СЂСЏРґРѕРј СЃ РёСЃС…РѕРґРЅС‹Рј .jar
+            if (sourceDir != null)
             {
-                var psi = new ProcessStartInfo("java", "-version")
+                foreach (var dir in Directory.GetDirectories(sourceDir))
                 {
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    RedirectStandardError = true
-                };
-                using var proc = Process.Start(psi);
-                proc.WaitForExit(3000);
-                return proc.ExitCode == 0;
+                    string dirName = Path.GetFileName(dir);
+                    string destDir = Path.Combine(mascotStorageDir, dirName);
+                    CopyDirectoryRecursive(dir, destDir);
+                }
             }
-            catch
+
+            var mascot = new Mascot// РЎРѕР·РґР°С‘Рј РѕР±СЉРµРєС‚ РјР°СЃРєРѕС‚Р° Рё РґРѕР±Р°РІР»СЏРµРј РІ СЃРїРёСЃРѕРє
             {
-                return false;
-            }
+                Name = name,
+                JarPath = destJarPath,
+                IsRunning = false
+            };
+            mascots.Add(mascot);
         }
 
-        private void Runbtn_Click(object sender, EventArgs e)
+        private void Runbtn_Click(object sender, EventArgs e) // РєРЅРѕРїРєР° Р·Р°РїСѓСЃС‚РёС‚СЊ РїРµСЂСЃ
         {
 
             if (dgvMascots.CurrentRow?.DataBoundItem is Mascot selected)
             {
                 if (selected.IsRunning)
                 {
-                    MessageBox.Show("Маскот уже запущен.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("РњР°СЃРєРѕС‚ СѓР¶Рµ Р·Р°РїСѓС‰РµРЅ.", "РРЅС„РѕСЂРјР°С†РёСЏ", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
-                if (!IsJavaAvailable())
+
+                if (!IsJavaAvailable)
                 {
-                    MessageBox.Show("Java не найдена.Ошибка");
+                    Logger.Error("Java РЅРµ РЅР°Р№РґРµРЅР° РёР»Рё РЅРµ РґРѕСЃС‚СѓРїРЅР°.");
+                    MessageBox.Show("Java РЅРµ РЅР°Р№РґРµРЅР°. РџРѕР¶Р°Р»СѓР№СЃС‚Р°, СѓСЃС‚Р°РЅРѕРІРёС‚Рµ JRE Рё РїСЂРѕРїРёС€РёС‚Рµ РїСѓС‚СЊ РІ СЃРёСЃС‚РµРјРЅС‹С… РїРµСЂРµРјРµРЅРЅС‹С….",
+                        "РћС€РёР±РєР°", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
+
                 try
                 {
+                    Logger.Info($"Р—Р°РїСѓСЃРє РјР°СЃРєРѕС‚Р° '{selected.Name}' РёР· '{selected.JarPath}'");
                     _processManager.Start(selected);
                     dgvMascots.Refresh();
+                    Logger.Info($"РњР°СЃРєРѕС‚ '{selected.Name}' СѓСЃРїРµС€РЅРѕ Р·Р°РїСѓС‰РµРЅ, PID: {selected.ProcessId}");
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Ошибка запуска: {ex.Message}");
+                    Logger.Error($"РћС€РёР±РєР° Р·Р°РїСѓСЃРєР° РјР°СЃРєРѕС‚Р° '{selected.Name}'", ex);
+                    MessageBox.Show($"РћС€РёР±РєР° Р·Р°РїСѓСЃРєР°: {ex.Message}", "РћС€РёР±РєР°", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
 
-        private void Stopbtn_Click(object sender, EventArgs e)
+        private void Stopbtn_Click(object sender, EventArgs e)// РєРЅРѕРїРєР° СЃС‚РѕРї РїРµСЂСЃ
         {
-            if (dgvMascots.CurrentRow?.DataBoundItem is Mascot selected)
+            // РџСЂРѕРІРµСЂРєР°, РІС‹Р±СЂР°РЅР° Р»Рё СЃС‚СЂРѕРєР°
+            if (dgvMascots.CurrentRow == null)
             {
-                _processManager.Stop(selected);
-                dgvMascots.Refresh();
+                MessageBox.Show("Р’С‹Р±РµСЂРёС‚Рµ РјР°СЃРєРѕС‚Р° РІ С‚Р°Р±Р»РёС†Рµ.", "РћСЃС‚Р°РЅРѕРІРєР°",
+                                MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
             }
+
+            if (!(dgvMascots.CurrentRow.DataBoundItem is Mascot selected))
+                return;
+
+            // Р•СЃР»Рё СѓР¶Рµ РЅРµ Р·Р°РїСѓС‰РµРЅ вЂ“ РїСЂРѕСЃС‚Рѕ СЃР±СЂР°СЃС‹РІР°РµРј СЃРѕСЃС‚РѕСЏРЅРёРµ Рё РІС‹С…РѕРґРёРј
+            if (!selected.IsRunning || selected.ProcessId == null)
+            {
+                selected.IsRunning = false;
+                selected.ProcessId = null;
+                dgvMascots.Refresh();
+                return;
+            }
+
+            // РЎРѕС…СЂР°РЅСЏРµРј PID РґРѕ РІС‹Р·РѕРІР° Stop (Stop РѕР±РЅСѓР»РёС‚ selected.ProcessId)
+            int pid = selected.ProcessId.Value;
+
+            try
+            {
+                // 1. РњСЏРіРєР°СЏ РѕСЃС‚Р°РЅРѕРІРєР° С‡РµСЂРµР· РјРµРЅРµРґР¶РµСЂ
+                _processManager.Stop(selected);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"РћС€РёР±РєР° РІ РјРµРЅРµРґР¶РµСЂРµ РѕСЃС‚Р°РЅРѕРІРєРё: {ex.Message}");
+            }
+
+            // 2. РџСЂРёРЅСѓРґРёС‚РµР»СЊРЅРѕРµ Р·Р°РІРµСЂС€РµРЅРёРµ РїСЂРѕС†РµСЃСЃР°, РµСЃР»Рё РѕРЅ РµС‰С‘ Р¶РёРІ
+            try
+            {
+                Process proc = Process.GetProcessById(pid);
+                if (!proc.HasExited)
+                {
+                    proc.Kill();
+                    proc.WaitForExit(2000);
+                    Logger.Info($"РџСЂРѕС†РµСЃСЃ {pid} РїСЂРёРЅСѓРґРёС‚РµР»СЊРЅРѕ Р·Р°РІРµСЂС€С‘РЅ.");
+                }
+            }
+            catch (ArgumentException)
+            {
+                // РџСЂРѕС†РµСЃСЃ СЃ С‚Р°РєРёРј Id СѓР¶Рµ РЅРµ СЃСѓС‰РµСЃС‚РІСѓРµС‚ вЂ“ СЌС‚Рѕ РЅРѕСЂРјР°Р»СЊРЅРѕ
+                Logger.Info($"РџСЂРѕС†РµСЃСЃ {pid} СѓР¶Рµ Р·Р°РІРµСЂС€С‘РЅ.");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"РћС€РёР±РєР° РїСЂРё РїСЂРёРЅСѓРґРёС‚РµР»СЊРЅРѕР№ РѕСЃС‚Р°РЅРѕРІРєРµ РїСЂРѕС†РµСЃСЃР° {pid}: {ex.Message}");
+            }
+
+            // 3. РЎР±СЂРѕСЃ СЃРѕСЃС‚РѕСЏРЅРёСЏ РІ Р»СЋР±РѕРј СЃР»СѓС‡Р°Рµ
+            selected.IsRunning = false;
+            selected.ProcessId = null;
+            dgvMascots.Refresh();
         }
 
-        private void Deletebtn_Click(object sender, EventArgs e)
+        private void Deletebtn_Click(object sender, EventArgs e)// РєРЅРѕРїРєР° СѓРґР°Р»РёС‚СЊ РїРµСЂСЃ
         {
             if (dgvMascots.CurrentRow?.DataBoundItem is Mascot selected)
             {
                 if (selected.IsRunning)
                 {
-                    var result = MessageBox.Show("Маскот сейчас запущен. Остановить и удалить?",
-                        "Подтверждение", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-                    if (result == DialogResult.Yes)
+                    var result = MessageBox.Show("РњР°СЃРєРѕС‚ СЃРµР№С‡Р°СЃ Р·Р°РїСѓС‰РµРЅ. РћСЃС‚Р°РЅРѕРІРёС‚СЊ Рё СѓРґР°Р»РёС‚СЊ?",
+                        "РџРѕРґС‚РІРµСЂР¶РґРµРЅРёРµ", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                    if (result == DialogResult.Yes)// РћСЃС‚Р°РЅР°РІР»РёРІР°РµРј РёСЃРїРѕР»СЊР·СѓСЏ Р»РѕРіРёРєСѓ РєРЅРѕРїРєРё СЃС‚РѕРї
                     {
-                        // Останавливаем используя логику кнопки стоп
                         {
                             _processManager.Stop(selected);
                             dgvMascots.Refresh();
@@ -210,39 +313,16 @@ namespace ShimejiPlan124325
                     }
                     else return;
                 }
-
-                // Удаляем jar-файл из хранилища (если вы его копировали туда)
-                if (File.Exists(selected.JarPath))
+                if (File.Exists(selected.JarPath))// РЈРґР°Р»СЏРµРј jar-С„Р°Р№Р» РёР· С…СЂР°РЅРёР»РёС‰Р° 
                 {
                     try { File.Delete(selected.JarPath); }
-                    catch { /* игнорируем ошибку */ }
+                    catch { /* РёРіРЅРѕСЂРёСЂСѓРµРј РѕС€РёР±РєСѓ */ }
                 }
-
                 mascots.Remove(selected);
                 dgvMascots.Refresh();
             }
         }
-        private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
-        {
-            var running = mascots.Where(m => m.IsRunning).ToList();
-            if (running.Any())
-            {
-                var dlg = MessageBox.Show($"Запущено маскотов: {running.Count}. Остановить их перед выходом?",
-                    "Завершение", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
-                if (dlg == DialogResult.Yes)
-                {
-                    foreach (var m in running)
-                        StopMascot(m);
-                }
-                else if (dlg == DialogResult.Cancel)
-                {
-                    e.Cancel = true;
-                    return;
-                }
-                // Если "Нет" – оставляем процессы работать, приложение завершится
-            }
-        }
-        private void StopMascot(Mascot mascot)
+        private void StopMascot(Mascot mascot) //РєРЅРѕРїРєР° СЃС‚РѕРї РїРµСЂСЃ
         {
             if (!mascot.IsRunning || mascot.ProcessId == null)
                 return;
@@ -252,35 +332,83 @@ namespace ShimejiPlan124325
                 var proc = Process.GetProcessById(mascot.ProcessId.Value);
                 if (!proc.HasExited)
                 {
-                    // Пытаемся закрыть главное окно
-                    proc.CloseMainWindow();
-                    // Ждём 3 секунды
-                    if (!proc.WaitForExit(3000))
+                    proc.CloseMainWindow();// РїРѕРїС‹С‚РєР° Р·Р°РєСЂС‹С‚СЊ РіР»Р°РІРЅРѕРµ РѕРєРЅРѕ
+                    if (!proc.WaitForExit(3000))// Р¶РґС‘Рј 3 СЃРµРєСѓРЅРґС‹
                     {
-                        // Если не завершился — принудительно
-                        proc.Kill();
+                        proc.Kill();// РµСЃР»Рё С‡С‚Рѕ С‚Рѕ РїСЂРёРЅСѓРґРёС‚РµР»СЊРЅРѕ
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex)// РµСЃР»Рё РїСЂРѕС†РµСЃСЃ СѓР¶Рµ Р·Р°РІРµСЂС€С‘РЅ РёР»Рё РЅРµС‚ РїСЂР°РІ РґРѕСЃС‚СѓРїР°
             {
-                // Процесс уже мог быть завершён или нет прав доступа
-                // Логируем или показываем сообщение, если нужно
-                Debug.WriteLine($"Ошибка остановки маскота: {ex.Message}");
+                Debug.WriteLine($"РћС€РёР±РєР° РѕСЃС‚Р°РЅРѕРІРєРё РјР°СЃРєРѕС‚Р°: {ex.Message}");
             }
             finally
             {
                 mascot.IsRunning = false;
                 mascot.ProcessId = null;
-                // Обновляем таблицу (если привязан BindingList, он уведомит DataGridView)
-                dgvMascots.Refresh();
+                dgvMascots.Refresh();// РћР±РЅРѕРІР»СЏРµРј С‚Р°Р±Р»РёС†Сѓ (РµСЃР»Рё РїСЂРёРІСЏР·Р°РЅ BindingList, РѕРЅ СѓРІРµРґРѕРјРёС‚ DataGridView)
+            }
+        }
+        private void Settingsbtn_Click(object sender, EventArgs e)// РєРЅРѕРїРєР° РЅР°СЃС‚СЂРѕРµРє
+        {
+            using var settingsForm = new SettingsForm();
+            settingsForm.ShowDialog(this);
+        }
+
+        // РєРЅРѕРїРєРё РІС‚РѕСЂРѕР№ С„РѕСЂРјС‹
+        public void ShowNotificationBubble(ScheduledNotification notif)
+        {
+            RECT? mascotRect = null;
+
+            if (notif.TargetMascotName == "Р›СЋР±РѕР№ Р°РєС‚РёРІРЅС‹Р№")
+            {
+                var result = ShimejiWindowFinder.FindAnyActiveWindow();   // в†ђ СЃРµСЂРІРёСЃ
+                if (result != null) mascotRect = result.Value.rect;
+            }
+            else
+            {
+                Mascot? target = mascots.FirstOrDefault(m => m.Name == notif.TargetMascotName);
+                if (target != null)
+                {
+                    var result = ShimejiWindowFinder.FindWindowByMascot(target);  // в†ђ СЃРµСЂРІРёСЃ
+                    if (result != null) mascotRect = result.Value.rect;
+                }
+            }
+
+            if (mascotRect != null)
+            {
+                var bubble = new BubbleNotificationForm(notif.Message);
+                bubble.PositionNearMascot(mascotRect.Value);
+                bubble.Show();
+            }
+            else
+            {
+                notifyIcon.ShowBalloonTip(5000, "Shimeji Manager", notif.Message, ToolTipIcon.Info);
+            }
+        }
+        private void EditNotbtn_Click(object sender, EventArgs e)// РєРЅРѕРїРєР° РёР·РјРµРЅРµРЅРёРµ РЅР°РїРѕРјРёРЅР°РЅРёР№
+        {
+            if (dgvNotifications.CurrentRow?.DataBoundItem is ScheduledNotification selected)
+            {
+                using var editor = new NotificationEditForm(selected, GetMascotNames());
+                if (editor.ShowDialog() == DialogResult.OK)
+                {
+                    dgvNotifications.Refresh();// РѕР±РЅРѕРІР»РµРЅРёРµ Р°РІС‚РѕРјР°С‚
+                }
+            }
+        }
+        private void DeleteNotbtn_Click(object sender, EventArgs e)// РєРЅРѕРїРєР° СѓРґР°Р»РµРЅРёСЏ РЅР°РїРѕРјРёРЅР°РЅРёР№
+        {
+            if (dgvNotifications.CurrentRow?.DataBoundItem is ScheduledNotification selected)
+            {
+                _notifications.Remove(selected);
             }
         }
 
-
-        // подтяжка списка на вторую страницу
+        // РїРѕРґС‚СЏР¶РєР° СЃРїРёСЃРєР° РЅР° РІС‚РѕСЂСѓСЋ СЃС‚СЂР°РЅРёС†Сѓ
         private List<string> GetMascotNames() => mascots.Select(m => m.Name).ToList();
-        private void AddNotbtn_Click(object sender, EventArgs e) // кнопка на второй странице
+        private void AddNotbtn_Click(object sender, EventArgs e) // РєРЅРѕРїРєР° РЅР° РІС‚РѕСЂРѕР№ СЃС‚СЂР°РЅРёС†Рµ
         {
             using var editor = new NotificationEditForm(GetMascotNames());
             if (editor.ShowDialog() == DialogResult.OK)
@@ -288,44 +416,42 @@ namespace ShimejiPlan124325
                 _notifications.Add(editor.Notification);
             }
         }
-
-        private void EditNotbtn_Click(object sender, EventArgs e)
+        // РєРЅРѕРїРєР° РЅР° С‚СЂРµС‚СЊРµР№ СЃС‚СЂР°РЅРёС†Рµ
+        private void btnOpenFocus_Click(object sender, EventArgs e)
         {
-            if (dgvNotifications.CurrentRow?.DataBoundItem is ScheduledNotification selected)
+            var settings = FocusSettingsStorage.Load();
+            var focusForm = new FocusForm(settings);
+            focusForm.FormClosed += (s, args) =>
             {
-                using var editor = new NotificationEditForm(selected, GetMascotNames());
-                if (editor.ShowDialog() == DialogResult.OK)
-                {
-                    // Обновление всех связанных полей произойдёт автоматически через привязку
-                    dgvNotifications.Refresh();
-                }
-            }
+                // Р“Р»Р°РІРЅРѕРµ РѕРєРЅРѕ РјРѕР¶РµС‚ Р±С‹С‚СЊ СЃРєСЂС‹С‚Рѕ, РїРѕРєР°Р·С‹РІР°РµРј СЃРЅРѕРІР°, РµСЃР»Рё РЅСѓР¶РЅРѕ
+                this.Show();
+                this.WindowState = FormWindowState.Normal;
+            };
+
+            // РћРїС†РёРѕРЅР°Р»СЊРЅРѕ СЃРІРѕСЂР°С‡РёРІР°РµРј РіР»Р°РІРЅРѕРµ РѕРєРЅРѕ РІ С‚СЂРµР№
+            this.Hide();
+            focusForm.Show();
         }
 
-        private void DeleteNotbtn_Click(object sender, EventArgs e)
-        {
-            if (dgvNotifications.CurrentRow?.DataBoundItem is ScheduledNotification selected)
-            {
-                _notifications.Remove(selected);
-            }
-        }
-        // создаем таймер 
+        // РїСЂРѕС‡РёРµ РІСЃРїРѕРјРѕРіР°С‚РµР»СЊРЅС‹Рµ Рё РІ РѕСЃРЅРѕРІРЅРѕРј РѕР±С‰РёРµ С€С‚СѓРєРё
+
+        // СЃРѕР·РґР°РµРј С‚Р°Р№РјРµСЂ 
         private void TimerCheck_Tick(object sender, EventArgs e)
         {
             var now = DateTime.Now;
             bool anyChange = false;
-            foreach (var notif in _notifications.ToList()) // копия для безопасного перебора
+            foreach (var notif in _notifications.ToList()) // РєРѕРїРёСЏ РґР»СЏ Р±РµР·РѕРїР°СЃРЅРѕРіРѕ РїРµСЂРµР±РѕСЂР°
             {
                 if (notif.Executed || notif.Time > now)
                     continue;
 
-                // Уведомление должно сработать
-                ShowNotificationBubble(notif);   // метод показа пузыря (реализуем позже)
+                // РЈРІРµРґРѕРјР»РµРЅРёРµ РґРѕР»Р¶РЅРѕ СЃСЂР°Р±РѕС‚Р°С‚СЊ
+                ShowNotificationBubble(notif);   // РјРµС‚РѕРґ РїРѕРєР°Р·Р° РїСѓР·С‹СЂСЏ (СЂРµР°Р»РёР·СѓРµРј РїРѕР·Р¶Рµ)
 
                 anyChange = true;
                 if (notif.Repeat != RepeatMode.None)
                 {
-                    // Вычисляем следующее время
+                    // Р’С‹С‡РёСЃР»СЏРµРј СЃР»РµРґСѓСЋС‰РµРµ РІСЂРµРјСЏ
                     switch (notif.Repeat)
                     {
                         case RepeatMode.Daily:
@@ -335,21 +461,129 @@ namespace ShimejiPlan124325
                             notif.Time = notif.Time.AddDays(7);
                             break;
                     }
-                    notif.Executed = false; // сброс для повторного срабатывания
+                    notif.Executed = false; // СЃР±СЂРѕСЃ РґР»СЏ РїРѕРІС‚РѕСЂРЅРѕРіРѕ СЃСЂР°Р±Р°С‚С‹РІР°РЅРёСЏ
                 }
                 else
                 {
-                    notif.Executed = true; // однократное – выполнено
+                    notif.Executed = true; // РѕРґРЅРѕРєСЂР°С‚РЅРѕРµ вЂ“ РІС‹РїРѕР»РЅРµРЅРѕ
                 }
             }
             if (anyChange)
                 dgvNotifications.Refresh();
         }
-        private void ShowNotificationBubble(ScheduledNotification notif)// заглушка для пузыря пока что
+        private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            // Временная отладка – потом заменим на графический пузырь
-            MessageBox.Show(notif.Message, $"Уведомление для {notif.TargetMascotName}",
-                MessageBoxButtons.OK, MessageBoxIcon.Information);
+            var running = mascots.Where(m => m.IsRunning && m.ProcessId != null).ToList();
+            if (running.Any())
+            {
+                var dlg = MessageBox.Show($"Р—Р°РїСѓС‰РµРЅРѕ РјР°СЃРєРѕС‚РѕРІ: {running.Count}. РћСЃС‚Р°РЅРѕРІРёС‚СЊ РёС… РїРµСЂРµРґ РІС‹С…РѕРґРѕРј?",
+                    "Р—Р°РІРµСЂС€РµРЅРёРµ", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
+                if (dlg == DialogResult.Yes)
+                {
+                    foreach (var m in running)
+                    {
+                        try
+                        {
+                            _processManager.Stop(m);
+                            // РќР°РґС‘Р¶РЅРѕ СѓР±РёРІР°РµРј, РµСЃР»Рё РµС‰С‘ Р¶РёРІ
+                            if (m.ProcessId != null)
+                            {
+                                var proc = Process.GetProcessById(m.ProcessId.Value);
+                                if (!proc.HasExited) proc.Kill();
+                            }
+                        }
+                        catch { /* РёРіРЅРѕСЂРёСЂСѓРµРј, РІСЃС‘ СЂР°РІРЅРѕ РІС‹С…РѕРґРёРј */ }
+                        finally
+                        {
+                            m.IsRunning = false;
+                            m.ProcessId = null;
+                        }
+                    }
+                }
+                else if (dlg == DialogResult.Cancel)
+                {
+                    e.Cancel = true;
+                    return;
+                }
+            }
+        }
+
+        private static void CopyDirectoryRecursive(string sourceDir, string destDir)// Р РµРєСѓСЂСЃРёРІРЅРѕ РєРѕРїРёСЂСѓРµС‚ РґРёСЂРµРєС‚РѕСЂРёСЋ СЃРѕ РІСЃРµРј СЃРѕРґРµСЂР¶РёРјС‹Рј.
+        {
+            Directory.CreateDirectory(destDir);// РЎРѕР·РґР°С‘Рј С†РµР»РµРІСѓСЋ РїР°РїРєСѓ, РµСЃР»Рё РµС‘ РЅРµС‚
+
+            foreach (var file in Directory.GetFiles(sourceDir))// РљРѕРїРёСЂСѓРµРј РІСЃРµ С„Р°Р№Р»С‹
+            {
+                string destFile = Path.Combine(destDir, Path.GetFileName(file));
+                File.Copy(file, destFile, overwrite: true);
+            }
+
+            foreach (var dir in Directory.GetDirectories(sourceDir))// Р РµРєСѓСЂСЃРёРІРЅРѕ РѕР±СЂР°Р±Р°С‚С‹РІР°РµРј РїРѕРґРїР°РїРєРё
+            {
+                string destSubDir = Path.Combine(destDir, Path.GetFileName(dir));
+                CopyDirectoryRecursive(dir, destSubDir);
+            }
+        }
+        private void ConfigureTasksGrid() // РјРµС‚РѕРґ РЅР°СЃС‚СЂРѕР№РєРё С‚Р°Р±Р»РёС†С‹ Р·Р°РґР°С‡
+        {
+            dgvTasks.AutoGenerateColumns = false;
+            dgvTasks.DataSource = _tasks;
+
+            dgvTasks.Columns.Clear();// РћС‡РёС‰Р°РµРј РєРѕР»РѕРЅРєРё, РµСЃР»Рё РѕРЅРё СѓР¶Рµ Р±С‹Р»Рё РґРѕР±Р°РІР»РµРЅС‹
+
+            var checkColumn = new DataGridViewCheckBoxColumn// РљРѕР»РѕРЅРєР° СЃ С‡РµРєР±РѕРєСЃРѕРј
+            {
+                Name = "colCompleted",
+                HeaderText = "",
+                DataPropertyName = "IsCompleted",
+                Width = 30,
+                TrueValue = true,
+                FalseValue = false
+            };
+            dgvTasks.Columns.Add(checkColumn);
+
+            var textColumn = new DataGridViewTextBoxColumn// РўРµРєСЃС‚РѕРІР°СЏ РєРѕР»РѕРЅРєР°
+            {
+                Name = "colTaskText",
+                HeaderText = "РћРїРёСЃР°РЅРёРµ Р·Р°РґР°С‡Рё",
+                DataPropertyName = "Text",
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill
+            };
+            dgvTasks.Columns.Add(textColumn);
+            dgvTasks.CellValueChanged += (s, e) =>
+            {
+                if (e.RowIndex >= 0 && dgvTasks.Columns[e.ColumnIndex].Name == "colCompleted")
+                {
+                    TaskStorage.Save(_tasks); // СЃРѕС…СЂР°РЅСЏРµРј РёР·РјРµРЅРµРЅРёСЏ
+                }
+            };
+        }
+
+        private void btnAddTask_Click(object sender, EventArgs e)//РєРЅРѕРїРєР° РґРѕР±Р°СѓРІРёС‚СЊ Р·Р°РґР°С‡Рё
+        {
+            string taskText = Microsoft.VisualBasic.Interaction.InputBox(
+        "Р’РІРµРґРёС‚Рµ С‚РµРєСЃС‚ Р·Р°РґР°С‡Рё:", "РќРѕРІР°СЏ Р·Р°РґР°С‡Р°", "");
+            if (!string.IsNullOrWhiteSpace(taskText))
+            {
+                _tasks.Add(new TaskItem { Text = taskText.Trim(), IsCompleted = false });
+            }
+        }
+
+        private void btnDeleteTask_Click(object sender, EventArgs e)// РєРЅРѕРїРєР° СѓРґР°Р»РёС‚СЊ Р·Р°РґР°С‡Рё
+        {
+            if (dgvTasks.CurrentRow?.DataBoundItem is TaskItem selected)
+            {
+                _tasks.Remove(selected);
+            }
+            else
+            {
+                MessageBox.Show("Р’С‹Р±РµСЂРёС‚Рµ Р·Р°РґР°С‡Сѓ РґР»СЏ СѓРґР°Р»РµРЅРёСЏ.", "РЈРґР°Р»РµРЅРёРµ",
+                                MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+        private void tabPage2_Click(object sender, EventArgs e)//СЃР»СѓС‡Р°Р№РЅРѕ, РїРѕС‚РѕРј СѓР±РµСЂСѓ РєРѕРіР»Р° РЅРёР±СѓРґСЊ
+        {
+
         }
     }
 }
