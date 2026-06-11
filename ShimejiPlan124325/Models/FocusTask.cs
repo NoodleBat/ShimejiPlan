@@ -10,23 +10,34 @@ namespace ShimejiPlan124325.Models
 {
     public class FocusTask : INotifyPropertyChanged
     {
-        private string _text;
-        private bool _isDone;
+        private string _title = "";
+        private string _description = "";
+        private bool _isArchived;
 
-        public string Text
+        public string Title
         {
-            get => _text;
-            set { _text = value; OnPropertyChanged(); }
+            get => _title;
+            set { _title = value; OnPropertyChanged(); }
         }
 
-        public bool IsDone
+        public string Description
         {
-            get => _isDone;
-            set { _isDone = value; OnPropertyChanged(); }
+            get => _description;
+            set { _description = value; OnPropertyChanged(); }
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string name = null)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        public bool IsArchived
+        {
+            get => _isArchived;
+            set { _isArchived = value; OnPropertyChanged(); }
+        }
+
+        public override string ToString() => Title;
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected void OnPropertyChanged([CallerMemberName] string? name = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        }
     }
 }
